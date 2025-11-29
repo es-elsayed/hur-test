@@ -21,5 +21,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Seed complete data: 100 members, ~100 projects, 20 vouchers, and 200 balance operations
+        $this->call([
+            CompleteDataSeeder::class,
+        ]);
     }
 }

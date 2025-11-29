@@ -82,11 +82,12 @@ class Balance extends Model
     {
         return Attribute::make(
             get: function () {
-                if (!$this->member) {
+                $memberModel = $this->getRelationValue('member');
+                if (!$memberModel) {
                     return 0;
                 }
 
-                $commissionRate = config('fees.commission.' . $this->member->type, 0);
+                $commissionRate = config('fees.commission.' . $memberModel->type, 0);
                 return round(($this->amount * $commissionRate) / 100, 2);
             }
         );

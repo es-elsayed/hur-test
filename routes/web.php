@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\BalanceController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/balance');
+
+Route::get('/balance', [BalanceController::class, 'index'])->name('balance.index');

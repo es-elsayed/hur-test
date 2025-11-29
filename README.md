@@ -1,59 +1,164 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 💰 Hurr - نظام إدارة الرصيد المالي
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+نظام Laravel شامل لإدارة العمليات المالية (الإيداعات والسحوبات) مع واجهة مستخدم عربية متكاملة.
 
-## About Laravel
+## 🚀 التشغيل السريع
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### 1️⃣ تثبيت المتطلبات
+```bash
+composer install
+```
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 2️⃣ إعداد قاعدة البيانات
+```bash
+php artisan migrate:fresh --seed
+```
+هذا الأمر سيقوم بـ:
+- إنشاء جداول قاعدة البيانات
+- إضافة 50 عملية مالية (30 إيداع + 20 سحب)
+- إضافة 20 عضو (10 عملاء + 10 فريلانسرز)
+- إضافة 17 مشروع
+- إنشاء 20 كود خصم مع 10 استخدامات
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 3️⃣ تشغيل السيرفر
+```bash
+php artisan serve
+```
 
-## Learning Laravel
+### 4️⃣ افتح المتصفح
+```
+http://127.0.0.1:8000/balance
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## ✨ المميزات
 
-## Laravel Sponsors
+### 📊 صفحة الرصيد
+- ✅ عرض الرصيد الإجمالي المحسوب تلقائياً
+- ✅ جدول العمليات المالية مع Ajax Pagination
+- ✅ تفاصيل كل عملية في Modal منبثق
+- ✅ دعم كامل للغة العربية (RTL)
+- ✅ تصميم responsive مع Tailwind CSS
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 💳 العمليات المالية
+**الإيداعات (Income):**
+- المبلغ الأساسي + العمولة (8% للعملاء، 15% للفريلانسرز)
+- الضريبة (15% من العمولة)
+- الخصم من كوبونات الخصم (إن وجد)
+- بيانات الدفع (طريقة الدفع، رقم البطاقة، إلخ)
 
-### Premium Partners
+**السحوبات (Outcome):**
+- المبلغ الأساسي - العمولة - الضريبة
+- بيانات السحب (رقم الحساب البنكي، اسم البنك، إلخ)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 🎯 التفاصيل المعروضة في Modal
+- المبلغ الأساسي، العمولة، الضريبة، الخصم
+- المبلغ الإجمالي
+- رقم العملية (Transaction Reference)
+- معلومات العضو (الاسم، النوع)
+- معلومات المشروع (إن وجد)
+- الحالة (مكتمل/قيد التنفيذ)
+- التاريخ والوقت
+- بيانات إضافية مترجمة للعربية
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🏗️ البنية التقنية
 
-## Code of Conduct
+### Backend
+- **Laravel 11** - Framework
+- **SQLite** - Database
+- **Enums** - ProcessType, ActionStatus
+- **Services** - BalanceService لمنطق العمليات
+- **Resources** - API Response Transformers
+- **Policies** - Authorization
+- **Factories & Seeders** - Test Data
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Frontend
+- **Blade Templates** - Server-side rendering
+- **Tailwind CSS** - Styling (via CDN)
+- **jQuery** - Ajax requests
+- **JavaScript** - Dynamic UI
 
-## Security Vulnerabilities
+### API Endpoints
+```
+GET  /api/balances?page={page}     # قائمة العمليات (مع pagination)
+GET  /api/balances/{id}            # تفاصيل عملية محددة
+POST /api/balances                 # إنشاء عملية جديدة
+PUT  /api/balances/{id}/complete   # إكمال عملية
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## 📁 الملفات الرئيسية
+
+### Controllers
+- `app/Http/Controllers/Web/BalanceController.php` - عرض الصفحة
+- `app/Http/Controllers/Api/BalanceController.php` - API Endpoints
+
+### Services
+- `app/Services/BalanceService.php` - منطق العمليات المالية
+
+### Models
+- `app/Models/Balance.php` - العمليات المالية
+- `app/Models/Member.php` - الأعضاء (عملاء/فريلانسرز)
+- `app/Models/Project.php` - المشاريع
+- `app/Models/Transaction.php` - معاملات الدفع
+- `app/Models/Voucher.php` - كوبونات الخصم
+- `app/Models/Invoice.php` - الفواتير
+
+### Views
+- `resources/views/layouts/dashboard.blade.php` - Layout رئيسي
+- `resources/views/pages/balance/index.blade.php` - صفحة الرصيد
+- `resources/views/components/layout/*` - Header, Sidebar, Footer
+
+### Seeders
+- `database/seeders/CompleteDataSeeder.php` - إنشاء بيانات شاملة
+
+---
+
+## ⚙️ الإعدادات
+
+### رسوم العمولات
+تُعرّف في `config/fees.php`:
+```php
+'commission' => [
+    'client' => 0.08,        // 8% للعملاء
+    'freelancer' => 0.15,    // 15% للفريلانسرز
+],
+'vat' => 0.15,              // 15% ضريبة القيمة المضافة
+```
+
+### الحسابات التلقائية
+**للإيداع:**
+```
+المبلغ الإجمالي = المبلغ الأساسي + العمولة + الضريبة - الخصم
+```
+
+**للسحب:**
+```
+المبلغ الصافي = المبلغ الأساسي - العمولة - الضريبة
+```
+
+---
+
+## 📖 التوثيق الإضافي
+
+للمزيد من التفاصيل، راجع:
+- `PROJECT_GUIDE.md` - دليل المشروع الكامل
+
+---
+
+## 🔒 ملاحظات
+
+- النظام يستخدم SQLite للتطوير
+- جميع البيانات الأولية هي بيانات تجريبية (Faker)
+- الـ API يدعم Pagination (10 عناصر/صفحة)
+- دعم كامل لـ RTL (Right-to-Left)
+
+---
+
+## 📝 License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

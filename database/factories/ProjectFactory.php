@@ -26,7 +26,7 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'member_id' => Member::factory(),
+            'member' => Member::factory(),
             'title' => fake()->sentence(4),
             'description' => fake()->paragraph(3),
             'budget' => fake()->randomFloat(2, 100, 10000),
