@@ -22,7 +22,6 @@ class StoreDepositRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'member_id' => 'required|exists:members,id',
             'project_id' => 'required|exists:projects,id',
             'amount' => 'required|numeric|min:0.01',
             'voucher_id' => 'nullable|exists:vouchers,id',
@@ -38,8 +37,6 @@ class StoreDepositRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'member_id.required' => 'Member ID is required',
-            'member_id.exists' => 'Member not found',
             'project_id.required' => 'Project ID is required',
             'project_id.exists' => 'Project not found',
             'amount.required' => 'Amount is required',

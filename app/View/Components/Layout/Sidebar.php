@@ -18,9 +18,8 @@ class Sidebar extends Component
     {
         $this->activeRoute = $activeRoute;
         
-        // Load current member data
-        // In a real app, this would be: auth()->user()
-        $this->member = Member::first();
+        // Load authenticated member
+        $this->member = auth()->user();
     }
 
     /**

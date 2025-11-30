@@ -10,12 +10,15 @@ class BalanceController extends Controller
 {
     public function index(Request $request)
     {
-        // For now, get the first member as a demo user
-        // In a real app, this would be: auth()->user()
-        $member = Member::with(['balances'])->first();
+        /** @var \App\Models\Member|null $member */
+        $member = auth()->user();
         
         // Calculate total balance
-        $totalBalance = $member ? $member->balances()
+        $totalBalance = 0;
+        $projects = collect();
+        
+        if ($member) {
+            $totalBalance = $member->balances()
             ->where('action', 'complete')
             ->get()
             ->sum(function ($balance) {
@@ -24,11 +27,16 @@ class BalanceController extends Controller
                 } else {
                     return -$balance->amount;
                 }
-            }) : 0;
+                });
+            
+            // Load member's projects
+            $projects = $member->projects()->select('id', 'title')->get();
+        }
 
         return view('pages.balance.index', [
             'member' => $member,
-            'totalBalance' => number_format($totalBalance, 2)
+            'totalBalance' => number_format($totalBalance, 2),
+            'projects' => $projects
         ]);
     }
 }

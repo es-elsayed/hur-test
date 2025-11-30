@@ -22,7 +22,6 @@ class StoreWithdrawalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'member_id' => 'required|exists:members,id',
             'amount' => 'required|numeric|min:0.01',
             'project_id' => 'nullable|exists:projects,id',
             'payout_data' => 'nullable|array',
@@ -37,8 +36,6 @@ class StoreWithdrawalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'member_id.required' => 'Member ID is required',
-            'member_id.exists' => 'Member not found',
             'amount.required' => 'Amount is required',
             'amount.numeric' => 'Amount must be a number',
             'amount.min' => 'Amount must be at least 0.01',

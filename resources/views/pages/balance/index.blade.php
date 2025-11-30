@@ -1,14 +1,33 @@
 <x-layouts.app title="منصة باشنور - الرصيد">
 
-    <x-balance.summary-card :totalBalance="$totalBalance" />
+    {{-- Alert Notification --}}
+    <x-ui.alert />
+
+    <x-balance.summary-card :totalBalance="$totalBalance" :memberType="$member?->type" />
 
     <x-balance.transactions-container />
 
     <x-balance.transaction-modal />
 
+    <x-balance.deposit-modal :projects="$projects" />
+
+    <x-balance.withdraw-modal :projects="$projects" />
+
 <x-slot:scripts>
     <script>
         jQuery(document).ready(function($) {
+            // Setup CSRF token for all Ajax requests
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+
+            // Inject data from Blade
+            const currentMemberId = {{ $member?->id ?? 'null' }};
+            const memberType = '{{ $member?->type ?? '' }}';
+            const projects = @json($projects);
+            
             let currentPage = 1;
 
             // Load transactions on page load
@@ -40,7 +59,7 @@
                             $('#loadingState').addClass('hidden');
                             $('#emptyState').removeClass('hidden');
                             console.error('Error loading transactions:', xhr);
-                            alert('حدث خطأ أثناء تحميل العمليات');
+                            showAlert('حدث خطأ أثناء تحميل العمليات', 'error');
                         }
                     });
                 }
@@ -185,7 +204,7 @@
                     },
                     error: function(xhr) {
                         console.error('Error loading transaction details:', xhr);
-                        alert('حدث خطأ أثناء تحميل تفاصيل العملية');
+                        showAlert('حدث خطأ أثناء تحميل تفاصيل العملية', 'error');
                         closeModal();
                     }
                 });
@@ -322,9 +341,220 @@
                 }
             });
 
-            // Withdraw button (placeholder)
+            // ============================================
+            // Deposit Modal Logic
+            // ============================================
+            
+            $('#depositBtn').on('click', function() {
+                if (memberType !== 'client') {
+                    showAlert('الإيداع متاح للعملاء فقط', 'warning');
+                    return;
+                }
+                openDepositModal();
+            });
+
+            function openDepositModal() {
+                $('#depositModal').removeClass('hidden');
+                setTimeout(function() {
+                    $('#depositModalContent').removeClass('-translate-x-full');
+                }, 10);
+            }
+
+            function closeDepositModal() {
+                $('#depositModalContent').addClass('-translate-x-full');
+                setTimeout(function() {
+                    $('#depositModal').addClass('hidden');
+                    $('#depositForm')[0].reset();
+                    $('#depositLoading').addClass('hidden');
+                }, 300);
+            }
+
+            $('#closeDepositModal, #cancelDeposit').on('click', closeDepositModal);
+
+            $('#depositModal').on('click', function(e) {
+                if (e.target.id === 'depositModal') {
+                    closeDepositModal();
+                }
+            });
+
+            // Handle deposit form submission
+            $('#depositForm').on('submit', function(e) {
+                e.preventDefault();
+
+                if (!currentMemberId) {
+                    showAlert('يجب تسجيل الدخول أولاً', 'error');
+                    return;
+                }
+
+                const amount = parseFloat($('#depositAmount').val());
+                const projectId = $('#depositProject').val();
+                const paymentMethod = $('#depositPaymentMethod').val();
+
+                if (!amount || amount <= 0) {
+                    showAlert('يرجى إدخال مبلغ صحيح', 'error');
+                    return;
+                }
+
+                if (!projectId) {
+                    showAlert('يرجى اختيار المشروع', 'error');
+                    return;
+                }
+
+                // Show loading
+                $('#depositLoading').removeClass('hidden');
+                $('#depositForm').addClass('hidden');
+
+                $.ajax({
+                    url: '/api/balances/deposit',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        project_id: parseInt(projectId),
+                        amount: amount,
+                        payment_data: {
+                            payment_method: paymentMethod,
+                            payment_date: new Date().toISOString()
+                        }
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            closeDepositModal();
+                            showAlert('✅ تم إنشاء عملية الإيداع بنجاح!', 'success');
+                            // Reload page after showing alert
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showAlert('حدث خطأ: ' + (response.message || 'فشل في إنشاء الإيداع'), 'error');
+                            $('#depositLoading').addClass('hidden');
+                            $('#depositForm').removeClass('hidden');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'حدث خطأ أثناء معالجة الإيداع';
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = Object.values(xhr.responseJSON.errors).flat();
+                            errorMessage = errors.join(', ');
+                        }
+                        
+                        showAlert(errorMessage, 'error');
+                        $('#depositLoading').addClass('hidden');
+                        $('#depositForm').removeClass('hidden');
+                    }
+                });
+            });
+
+            // ============================================
+            // Withdraw Modal Logic
+            // ============================================
+            
             $('#withdrawBtn').on('click', function() {
-                alert('وظيفة السحب ستكون متاحة قريباً');
+                openWithdrawModal();
+            });
+
+            function openWithdrawModal() {
+                $('#withdrawModal').removeClass('hidden');
+                setTimeout(function() {
+                    $('#withdrawModalContent').removeClass('-translate-x-full');
+                }, 10);
+            }
+
+            function closeWithdrawModal() {
+                $('#withdrawModalContent').addClass('-translate-x-full');
+                setTimeout(function() {
+                    $('#withdrawModal').addClass('hidden');
+                    $('#withdrawForm')[0].reset();
+                    $('#withdrawLoading').addClass('hidden');
+                }, 300);
+            }
+
+            $('#closeWithdrawModal, #cancelWithdraw').on('click', closeWithdrawModal);
+
+            $('#withdrawModal').on('click', function(e) {
+                if (e.target.id === 'withdrawModal') {
+                    closeWithdrawModal();
+                }
+            });
+
+            // Handle withdraw form submission
+            $('#withdrawForm').on('submit', function(e) {
+                e.preventDefault();
+
+                if (!currentMemberId) {
+                    showAlert('يجب تسجيل الدخول أولاً', 'error');
+                    return;
+                }
+
+                const amount = parseFloat($('#withdrawAmount').val());
+                const projectId = $('#withdrawProject').val();
+                const bankAccount = $('#withdrawBankAccount').val();
+                const bankName = $('#withdrawBankName').val();
+
+                if (!amount || amount <= 0) {
+                    showAlert('يرجى إدخال مبلغ صحيح', 'error');
+                    return;
+                }
+
+                if (!bankAccount || !bankName) {
+                    showAlert('يرجى إدخال بيانات الحساب البنكي', 'error');
+                    return;
+                }
+
+                // Show loading
+                $('#withdrawLoading').removeClass('hidden');
+                $('#withdrawForm').addClass('hidden');
+
+                const requestData = {
+                    amount: amount,
+                    payout_data: {
+                        bank_account: bankAccount,
+                        bank_name: bankName,
+                        payout_status: 'pending'
+                    }
+                };
+
+                // Add project_id if selected
+                if (projectId) {
+                    requestData.project_id = parseInt(projectId);
+                }
+
+                $.ajax({
+                    url: '/api/balances/withdraw',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(requestData),
+                    success: function(response) {
+                        if (response.success) {
+                            closeWithdrawModal();
+                            showAlert('✅ تم إنشاء عملية السحب بنجاح!', 'success');
+                            // Reload page after showing alert
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showAlert('حدث خطأ: ' + (response.message || 'فشل في إنشاء السحب'), 'error');
+                            $('#withdrawLoading').addClass('hidden');
+                            $('#withdrawForm').removeClass('hidden');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'حدث خطأ أثناء معالجة السحب';
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = Object.values(xhr.responseJSON.errors).flat();
+                            errorMessage = errors.join(', ');
+                        }
+                        
+                        showAlert(errorMessage, 'error');
+                        $('#withdrawLoading').addClass('hidden');
+                        $('#withdrawForm').removeClass('hidden');
+                    }
+                });
             });
         });
     </script>

@@ -63,9 +63,9 @@
                         </g>
                     </svg>
                 </button>
-                <button class="px-4 py-2 text-white bg-indigo-900 rounded-lg hover:bg-indigo-800">
+                {{-- <button class="px-4 py-2 text-white bg-indigo-900 rounded-lg hover:bg-indigo-800">
                     سجّل دخول
-                </button>
+                </button> --}}
             </div>
         </div>
     </div>

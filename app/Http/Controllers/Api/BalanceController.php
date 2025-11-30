@@ -32,15 +32,12 @@ class BalanceController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'data' => BalanceResource::collection($balances->items()),
-                'current_page' => $balances->currentPage(),
-                'last_page' => $balances->lastPage(),
-                'per_page' => $balances->perPage(),
-                'total' => $balances->total(),
-            ],
+        return $this->success([
+            'data' => BalanceResource::collection($balances->items()),
+            'current_page' => $balances->currentPage(),
+            'last_page' => $balances->lastPage(),
+            'per_page' => $balances->perPage(),
+            'total' => $balances->total(),
         ]);
     }
 
@@ -55,10 +52,7 @@ class BalanceController extends Controller
         $balance->load(['member', 'project']);
         $details = $this->balanceService->getBalanceDetails($balance);
 
-        return response()->json([
-            'success' => true,
-            'data' => new BalanceDetailResource($details),
-        ]);
+        return $this->success(new BalanceDetailResource($details));
     }
 
     /**
@@ -70,11 +64,12 @@ class BalanceController extends Controller
     public function storeDeposit(StoreDepositRequest $request): JsonResponse
     {
         try {
-            $member = Member::findOrFail($request->member_id);
+            // Use authenticated user instead of member_id from request
+            $member = auth()->user();
             $project = Project::findOrFail($request->project_id);
 
             // Authorize using policy
-            $this->authorize('createDeposit', [Balance::class, $member]);
+            $this->authorize('createDeposit', Balance::class);
 
             $balance = $this->balanceService->createDeposit(
                 $member,
@@ -86,22 +81,11 @@ class BalanceController extends Controller
 
             $details = $this->balanceService->getBalanceDetails($balance);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Deposit created successfully',
-                'data' => $details,
-            ], 201);
+            return $this->success($details, 'Deposit created successfully', 201);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 403);
+            return $this->error($e->getMessage(), 403);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create deposit',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to create deposit', 500, $e->getMessage());
         }
     }
 
@@ -114,11 +98,12 @@ class BalanceController extends Controller
     public function storeWithdrawal(StoreWithdrawalRequest $request): JsonResponse
     {
         try {
-            $member = Member::findOrFail($request->member_id);
+            // Use authenticated user instead of member_id from request
+            $member = auth()->user();
             $project = $request->project_id ? Project::findOrFail($request->project_id) : null;
 
             // Authorize using policy
-            $this->authorize('createWithdrawal', [Balance::class, $member]);
+            $this->authorize('createWithdrawal', Balance::class);
 
             $balance = $this->balanceService->createWithdrawal(
                 $member,
@@ -129,22 +114,11 @@ class BalanceController extends Controller
 
             $details = $this->balanceService->getBalanceDetails($balance);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Withdrawal created successfully',
-                'data' => $details,
-            ], 201);
+            return $this->success($details, 'Withdrawal created successfully', 201);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 403);
+            return $this->error($e->getMessage(), 403);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create withdrawal',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to create withdrawal', 500, $e->getMessage());
         }
     }
 
@@ -166,25 +140,14 @@ class BalanceController extends Controller
 
             $this->balanceService->completeBalance($balance);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Balance operation completed successfully',
-                'data' => [
-                    'id' => $balance->id,
-                    'status' => $balance->action->value,
-                ],
-            ]);
+            return $this->success([
+                'id' => $balance->id,
+                'status' => $balance->action->value,
+            ], 'Balance operation completed successfully');
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You are not authorized to complete this operation',
-            ], 403);
+            return $this->error('You are not authorized to complete this operation', 403);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to complete balance operation',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to complete balance operation', 500, $e->getMessage());
         }
     }
 
@@ -206,16 +169,9 @@ class BalanceController extends Controller
                 $request->voucher_id
             );
 
-            return response()->json([
-                'success' => true,
-                'data' => $calculations,
-            ]);
+            return $this->success($calculations);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to calculate fees',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to calculate fees', 500, $e->getMessage());
         }
     }
 
@@ -235,16 +191,9 @@ class BalanceController extends Controller
                 $request->amount
             );
 
-            return response()->json([
-                'success' => true,
-                'data' => $calculations,
-            ]);
+            return $this->success($calculations);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to calculate fees',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to calculate fees', 500, $e->getMessage());
         }
     }
 }

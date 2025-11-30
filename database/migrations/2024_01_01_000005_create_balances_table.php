@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('member')->constrained('members')->onDelete('cascade');
             $table->enum('process', ['income', 'outcome']);
             $table->decimal('amount', 10, 2);
-            $table->foreignId('project')->constrained('projects')->onDelete('cascade');
+            $table->foreignId('project')->nullable()->constrained('projects')->onDelete('cascade');
             $table->enum('action', ['complete', 'un-complete'])->default('un-complete');
             $table->timestamps();
         });

@@ -1,5 +1,6 @@
 @props([
     'totalBalance' => '0.00',
+    'memberType' => null,
     'description' => 'ينتهي أرباحك عن المشاريع المكتملة التي تضيا والتي لم يمر عليها مدة 3 أيام كاملة من إجمالة استلام الأرباح'
 ])
 
@@ -21,12 +22,14 @@
 
         {{-- Actions --}}
         <div class="w-[20%] flex flex-col gap-3">
+            @if($memberType === 'client')
+                <x-ui.button id="depositBtn" variant="gradient">
+                    إيداع رصيد
+                </x-ui.button>
+            @endif
+            
             <x-ui.button id="withdrawBtn" variant="primary">
                 سحب الرصيد
-            </x-ui.button>
-            
-            <x-ui.button variant="gradient">
-                بيانات تحويل الرصيد
             </x-ui.button>
         </div>
     </div>

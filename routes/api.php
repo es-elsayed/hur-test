@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Balance operations routes
-Route::prefix('balances')->group(function () {
+// Balance operations routes (protected by web auth middleware for session-based authentication)
+Route::prefix('balances')->middleware(['web', 'auth'])->group(function () {
     // Get all balance operations
     Route::get('/', [BalanceController::class, 'index']);
     
