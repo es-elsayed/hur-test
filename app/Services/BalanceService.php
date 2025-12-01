@@ -48,21 +48,13 @@ class BalanceService
             ]);
 
             // Create transaction record (only for deposits)
-            $transactionRef = $this->generateTransactionReference();
-            $transaction = Transaction::create([
-                'transaction' => $transactionRef,
+            Transaction::create([
+                'transaction' => 'TXN-'.strtoupper(uniqid()).'-'.time(),
                 'project' => $project->id,
                 'client' => $member->id,
                 'amount' => $calculations['total_amount'],
-                'data' => array_merge([
-                    'balance_id' => $balance->id,
-                    'base_amount' => $amount,
-                    'commission_amount' => $calculations['commission_amount'],
-                    'vat_amount' => $calculations['vat_amount'],
-                    'discount_amount' => $calculations['discount_amount'],
-                    'total_amount' => $calculations['total_amount'],
-                    'voucher_id' => $voucherId,
-                ], $paymentData),
+                // Only store payment-related metadata, not fee calculations
+                'data' => $paymentData ?: null,
             ]);
 
             return $balance->load(['member', 'project']);
@@ -87,7 +79,7 @@ class BalanceService
             throw new Exception('Invalid member type for withdrawal');
         }
 
-        return DB::transaction(function () use ($member, $amount, $project, $payoutData) {
+        return DB::transaction(function () use ($member, $amount, $project) {
             // Calculate fees
             $calculations = $this->calculateWithdrawalFees($member, $amount);
 
@@ -221,16 +213,6 @@ class BalanceService
     }
 
     /**
-     * Generate a unique transaction reference
-     *
-     * @return string
-     */
-    protected function generateTransactionReference(): string
-    {
-        return 'TXN-' . strtoupper(uniqid()) . '-' . time();
-    }
-
-    /**
      * Get balance details with all calculations
      *
      * @param Balance $balance
@@ -246,30 +228,25 @@ class BalanceService
         $project = $balance->project()->first();
 
         if ($balance->process === ProcessType::INCOME) {
-            // For deposits, try to get transaction data
-            $transaction = Transaction::whereJsonContains('data->balance_id', $balance->id)->first();
-            $voucherId = $transaction ? ($transaction->data['voucher_id'] ?? null) : null;
-
-            $calculations = $this->calculateDepositFees($member, $amount, $balance->project, $voucherId);
+            // For deposits, get related transaction and use Balance accessors for calculations
+            $transaction = $balance->transaction();
 
             return [
                 'id' => $balance->id,
                 'transactionRef' => $transaction ? $transaction->transaction : null,
                 'processType' => $balance->process->value,
                 'processAmount' => $balance->amount,
-                'commissionAmount' => $calculations['commission_amount'],
-                'vatAmount' => $calculations['vat_amount'],
-                'discountAmount' => $calculations['discount_amount'],
-                'totalAmount' => $calculations['total_amount'],
+                'commissionAmount' => $balance->commission_amount,
+                'vatAmount' => $balance->vat_amount,
+                'discountAmount' => $balance->discount_amount,
+                'totalAmount' => $balance->total_amount,
                 'processStatus' => $balance->action->value,
                 'processCreated' => $balance->created_at->toDateTimeString(),
                 'memberName' => $member ? $member->name : 'N/A',
                 'memberType' => $member ? $member->type : 'N/A',
                 'projectId' => $project ? $project->id : null,
                 'projectTitle' => $project ? $project->title : null,
-                'additionalData' => $transaction ? array_filter($transaction->data, function($key) {
-                    return !in_array($key, ['balance_id', 'base_amount', 'commission_amount', 'vat_amount', 'discount_amount', 'total_amount', 'voucher_id']);
-                }, ARRAY_FILTER_USE_KEY) : [],
+                'additionalData' => $transaction && is_array($transaction->data) ? $transaction->data : [],
             ];
         } else {
             // For withdrawals

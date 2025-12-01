@@ -123,7 +123,14 @@ class CompleteDataSeeder extends Seeder
                         
                         // Create invoice for 50% of completed deposits
                         if (rand(1, 100) <= 50) {
-                            $transaction = Transaction::whereJsonContains('data->balance_id', $balance->id)->first();
+                            // Since balance_id is no longer stored in the transaction data,
+                            // we approximate the matching transaction as the latest one
+                            // for this client and project.
+                            $transaction = Transaction::where('project', $project->id)
+                                ->where('client', $client->id)
+                                ->latest()
+                                ->first();
+
                             if ($transaction) {
                                 Invoice::create([
                                     'member' => $client->id,

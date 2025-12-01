@@ -8,6 +8,7 @@ use App\Models\Voucher;
 use App\Models\VoucherRedeem;
 use App\Services\BalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class BalanceServiceTest extends TestCase
@@ -19,11 +20,10 @@ class BalanceServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->artisan('migrate:fresh');
         $this->balanceService = new BalanceService();
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_deposit_fees_for_client_correctly()
     {
         $client = Member::factory()->client()->create();
@@ -38,7 +38,7 @@ class BalanceServiceTest extends TestCase
         $this->assertEquals(1092, $fees['total_amount']); // 1000 + 80 + 12
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_withdrawal_fees_for_client_correctly()
     {
         $client = Member::factory()->client()->create();
@@ -51,7 +51,7 @@ class BalanceServiceTest extends TestCase
         $this->assertEquals(908, $fees['net_payout']); // 1000 - 80 - 12
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_withdrawal_fees_for_freelancer_correctly()
     {
         $freelancer = Member::factory()->freelancer()->create();
@@ -64,7 +64,7 @@ class BalanceServiceTest extends TestCase
         $this->assertEquals(827.5, $fees['net_payout']); // 1000 - 150 - 22.5
     }
 
-    /** @test */
+    #[Test]
     public function it_applies_percent_voucher_discount()
     {
         $client = Member::factory()->client()->create();
@@ -84,7 +84,7 @@ class BalanceServiceTest extends TestCase
         $this->assertEquals(992, $fees['total_amount']); // 1000 + 80 + 12 - 100
     }
 
-    /** @test */
+    #[Test]
     public function it_applies_fixed_voucher_discount()
     {
         $client = Member::factory()->client()->create();
@@ -104,7 +104,7 @@ class BalanceServiceTest extends TestCase
         $this->assertEquals(1042, $fees['total_amount']); // 1000 + 80 + 12 - 50
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_deposit_for_client()
     {
         $client = Member::factory()->client()->create();
@@ -125,7 +125,7 @@ class BalanceServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_throws_exception_when_freelancer_tries_to_deposit()
     {
         $this->expectException(\Exception::class);
@@ -137,7 +137,7 @@ class BalanceServiceTest extends TestCase
         $this->balanceService->createDeposit($freelancer, $project, 1000);
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_withdrawal_for_client()
     {
         $client = Member::factory()->client()->create();
@@ -158,7 +158,7 @@ class BalanceServiceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_withdrawal_for_freelancer()
     {
         $freelancer = Member::factory()->freelancer()->create();

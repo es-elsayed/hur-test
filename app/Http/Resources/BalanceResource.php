@@ -16,16 +16,9 @@ class BalanceResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Get transaction reference if it's a deposit
-        $transactionRef = null;
-        if ($this->process === ProcessType::INCOME) {
-            $transaction = Transaction::whereJsonContains('data->balance_id', $this->id)->first();
-            $transactionRef = $transaction?->transaction;
-        }
-
         return [
             'id' => $this->id,
-            'transactionRef' => $transactionRef,
+            'transactionRef' => $this->transaction_ref ?? null,
             'processType' => $this->process->value,
             'processAmount' => $this->amount,
             'totalAmount' => $this->total_amount,

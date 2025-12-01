@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('voucher')->constrained('vouchers')->onDelete('cascade');
             $table->foreignId('member')->constrained('members')->onDelete('cascade');
             $table->boolean('redeem')->default(false);
-            $table->json('projects')->nullable()->default(json_encode([]));
+            $table->json('projects')->nullable();
             $table->timestamps();
         });
     }
