@@ -11,12 +11,6 @@ class BalancePolicyTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate:fresh');
-    }
-
     /** @test */
     public function client_can_create_deposit()
     {
