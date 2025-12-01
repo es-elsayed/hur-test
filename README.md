@@ -13,7 +13,9 @@ composer install
 cp .env.example .env
 php artisan key:generate
 
--- setup DB
+-- create sql file with command (touch database/database.sqlite) 
+-- or --
+-- setup your DB
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
