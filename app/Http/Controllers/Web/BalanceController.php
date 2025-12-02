@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Member;
+use App\Repositories\BalanceRepository;
 use Illuminate\Http\Request;
 
 class BalanceController extends Controller
 {
+    public function __construct(
+        protected BalanceRepository $balanceRepository
+    ) {}
+
     public function index(Request $request)
     {
         /** @var \App\Models\Member|null $member */
@@ -18,16 +23,20 @@ class BalanceController extends Controller
         $projects = collect();
         
         if ($member) {
-            $totalBalance = $member->balances()
-            ->where('action', 'complete')
-            ->get()
-            ->sum(function ($balance) {
+            $balances = $member->balances()
+                ->where('action', 'complete')
+                ->get();
+            
+            // Batch load voucher redeems to prevent N+1 queries
+            $this->balanceRepository->loadVoucherRedeems($balances);
+            
+            $totalBalance = $balances->sum(function ($balance) {
                 if ($balance->process->value === 'income') {
                     return $balance->amount;
                 } else {
                     return -$balance->amount;
                 }
-                });
+            });
             
             // Load member's projects
             $projects = $member->projects()->select('id', 'title')->get();

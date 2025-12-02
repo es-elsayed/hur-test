@@ -10,11 +10,18 @@ use App\Models\Project;
 use App\Models\Transaction;
 use App\Models\VoucherRedeem;
 use App\Models\Voucher;
+use App\Repositories\BalanceRepository;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
 class BalanceService
 {
+    protected BalanceRepository $balanceRepository;
+
+    public function __construct(BalanceRepository $balanceRepository)
+    {
+        $this->balanceRepository = $balanceRepository;
+    }
     /**
      * Create a deposit (income) operation
      * Only clients can make deposits
@@ -80,8 +87,6 @@ class BalanceService
         }
 
         return DB::transaction(function () use ($member, $amount, $project) {
-            // Calculate fees
-            $calculations = $this->calculateWithdrawalFees($member, $amount);
 
             // Create balance record (no transaction for withdrawals)
             $balance = Balance::create([
@@ -175,24 +180,52 @@ class BalanceService
      */
     public function calculateVoucherDiscount(int $voucherId, int $memberId, int $projectId, float $amount): float
     {
-        // Check if voucher is redeemed by this member
-        $voucherRedeem = VoucherRedeem::where('voucher', $voucherId)
-            ->where('member', $memberId)
-            ->where('redeem', true)
-            ->first();
+        // Try to use cached voucher redeem from repository
+        $voucherRedeemKey = $memberId . '-' . $projectId;
+        $voucherRedeemCache = $this->balanceRepository->getVoucherRedeemCache();
+        
+        $voucherRedeem = null;
+        if (array_key_exists($voucherRedeemKey, $voucherRedeemCache)) {
+            $voucherRedeem = $voucherRedeemCache[$voucherRedeemKey];
+        }
 
-        if (!$voucherRedeem) {
+        // Fallback to query if not cached
+        if ($voucherRedeem === null) {
+            $voucherRedeem = VoucherRedeem::where('voucher', $voucherId)
+                ->where('member', $memberId)
+                ->where('redeem', true)
+                ->first();
+        }
+
+        if (!$voucherRedeem || $voucherRedeem->voucher != $voucherId) {
             return 0;
         }
 
         // Check if voucher is used for this project
-        $projectIds = array_map('trim', explode(',', $voucherRedeem->projects ?? ''));
-        if (!in_array((string)$projectId, $projectIds, true)) {
+        $projectIds = $voucherRedeem->projects;
+        
+        // Handle both array (JSON) and string (comma-separated) formats
+        if (is_string($projectIds)) {
+            $projectIds = array_map('trim', explode(',', $projectIds));
+        }
+        
+        if (!is_array($projectIds) || !in_array($projectId, $projectIds)) {
             return 0;
         }
 
-        // Get voucher details
-        $voucher = Voucher::find($voucherId);
+        // Try to use cached voucher from repository
+        $voucherCache = $this->balanceRepository->getVoucherCache();
+        $voucher = null;
+        
+        if (array_key_exists($voucherId, $voucherCache)) {
+            $voucher = $voucherCache[$voucherId];
+        }
+
+        // Fallback to query if not cached
+        if ($voucher === null) {
+            $voucher = Voucher::find($voucherId);
+        }
+
         if (!$voucher) {
             return 0;
         }

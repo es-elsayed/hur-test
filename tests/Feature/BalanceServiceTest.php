@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\Project;
 use App\Models\Voucher;
 use App\Models\VoucherRedeem;
+use App\Repositories\BalanceRepository;
 use App\Services\BalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,7 +21,7 @@ class BalanceServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->balanceService = new BalanceService();
+        $this->balanceService = new BalanceService(new BalanceRepository());
     }
 
     #[Test]

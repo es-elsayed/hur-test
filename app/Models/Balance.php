@@ -4,7 +4,8 @@ namespace App\Models;
 
 use App\Enums\ActionStatus;
 use App\Enums\ProcessType;
-use App\Models\VoucherRedeem;
+use App\Models\Transaction;
+use App\Repositories\BalanceRepository;
 use App\Services\BalanceService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Balance extends Model
 {
     use HasFactory;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model Properties
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * The attributes that are mass assignable.
@@ -49,6 +56,12 @@ class Balance extends Model
         'total_amount',
     ];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * Get the member that owns the balance.
      */
@@ -65,8 +78,17 @@ class Balance extends Model
         return $this->belongsTo(Project::class, 'project');
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Methods
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Get the related transaction for this balance (deposits only)
+     * Get the related transaction for this balance (deposits only).
+     * 
+     * @return Transaction|null
      */
     public function transaction()
     {
@@ -74,30 +96,34 @@ class Balance extends Model
             return null;
         }
 
-        // Ensure we have the Member model instance (not just the foreign key int)
         $member = $this->getRelationValue('member') ?? $this->member()->first();
         $projectId = $this->project;
 
-        if (! $member || ! $projectId) {
+        if (!$member || !$projectId) {
             return null;
         }
 
         $fees = $this->getDepositFees();
-        if (! $fees) {
+        if (!$fees) {
             return null;
         }
 
         $expectedAmount = $fees['total_amount'];
-
-        return Transaction::where('project', $projectId)
-            ->where('client', $member->id)
-            ->where('amount', $expectedAmount)
-            ->latest()
-            ->first();
+        
+        // Use repository to get transaction
+        /** @var BalanceRepository $repository */
+        $repository = app(BalanceRepository::class);
+        return $repository->getTransaction($projectId, $member->id, $expectedAmount);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Attribute Accessors
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Calculate commission amount based on member type
+     * Calculate commission amount based on member type.
      */
     protected function commissionAmount(): Attribute
     {
@@ -115,7 +141,7 @@ class Balance extends Model
     }
 
     /**
-     * Calculate VAT amount (15% on commission only)
+     * Calculate VAT amount (15% on commission only).
      */
     protected function vatAmount(): Attribute
     {
@@ -128,7 +154,7 @@ class Balance extends Model
     }
 
     /**
-     * Calculate total amount based on process type
+     * Calculate total amount based on process type.
      * For income: base + commission + VAT - discount
      * For outcome: base - commission - VAT (net payout)
      */
@@ -154,7 +180,7 @@ class Balance extends Model
     }
 
     /**
-     * Get discount amount from transaction data (deposits only)
+     * Get discount amount from transaction data (deposits only).
      */
     protected function discountAmount(): Attribute
     {
@@ -172,59 +198,7 @@ class Balance extends Model
     }
 
     /**
-     * Resolve voucher ID for this balance (if any) based on member and project.
-     */
-    protected function resolveVoucherId(): ?int
-    {
-        if ($this->process !== ProcessType::INCOME) {
-            return null;
-        }
-
-        // Use the raw foreign key value to avoid mixing relation/model vs int
-        $memberId = $this->getAttribute('member');
-        $projectId = $this->project;
-
-        if (! $memberId || ! $projectId) {
-            return null;
-        }
-
-        $voucherRedeem = VoucherRedeem::where('member', $memberId)
-            ->where('redeem', true)
-            ->get()
-            ->first(function ($redeem) use ($projectId) {
-                $projectIds = explode(',', $redeem->projects);
-                return in_array($projectId, $projectIds);
-            });
-
-        return $voucherRedeem?->voucher;
-    }
-
-    /**
-     * Get deposit fee calculations for this balance using BalanceService.
-     */
-    protected function getDepositFees(): ?array
-    {
-        if ($this->process !== ProcessType::INCOME) {
-            return null;
-        }
-
-        // Ensure we have the Member model instance (not just the foreign key int)
-        $member = $this->getRelationValue('member') ?? $this->member()->first();
-        $projectId = $this->project;
-
-        if (! $member || ! $projectId) {
-            return null;
-        }
-
-        /** @var BalanceService $service */
-        $service = app(BalanceService::class);
-        $voucherId = $this->resolveVoucherId();
-
-        return $service->calculateDepositFees($member, $this->amount, $projectId, $voucherId);
-    }
-
-    /**
-     * Get net payout amount (for withdrawals)
+     * Get net payout amount (for withdrawals).
      */
     protected function netPayout(): Attribute
     {
@@ -239,7 +213,7 @@ class Balance extends Model
     }
 
     /**
-     * Get total paid amount (for deposits)
+     * Get total paid amount (for deposits).
      */
     protected function totalPaid(): Attribute
     {
@@ -270,5 +244,57 @@ class Balance extends Model
             }
         );
     }
-}
 
+    /*
+    |--------------------------------------------------------------------------
+    | Protected Helper Methods
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Resolve voucher ID for this balance (if any) based on member and project.
+     */
+    protected function resolveVoucherId(): ?int
+    {
+        if ($this->process !== ProcessType::INCOME) {
+            return null;
+        }
+
+        $memberId = $this->getAttribute('member');
+        $projectId = $this->project;
+
+        if (!$memberId || !$projectId) {
+            return null;
+        }
+
+        // Use repository to get voucher redeem
+        /** @var BalanceRepository $repository */
+        $repository = app(BalanceRepository::class);
+        $voucherRedeem = $repository->getVoucherRedeem($memberId, $projectId);
+
+        return $voucherRedeem?->voucher;
+    }
+
+    /**
+     * Get deposit fee calculations for this balance using BalanceService.
+     */
+    protected function getDepositFees(): ?array
+    {
+        if ($this->process !== ProcessType::INCOME) {
+            return null;
+        }
+
+        $member = $this->getRelationValue('member') ?? $this->member()->first();
+        $projectId = $this->project;
+
+        if (!$member || !$projectId) {
+            return null;
+        }
+
+        /** @var BalanceService $service */
+        $service = app(BalanceService::class);
+        $voucherId = $this->resolveVoucherId();
+
+        return $service->calculateDepositFees($member, $this->amount, $projectId, $voucherId);
+    }
+}

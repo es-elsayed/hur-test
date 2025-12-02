@@ -11,6 +11,7 @@ use App\Http\Resources\BalanceResource;
 use App\Models\Balance;
 use App\Models\Member;
 use App\Models\Project;
+use App\Repositories\BalanceRepository;
 use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,7 +19,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class BalanceController extends Controller
 {
     public function __construct(
-        protected BalanceService $balanceService
+        protected BalanceService $balanceService,
+        protected BalanceRepository $balanceRepository
     ) {}
 
     /**
@@ -31,6 +33,9 @@ class BalanceController extends Controller
         $balances = Balance::with(['member', 'project'])
             ->orderBy('created_at', 'desc')
             ->paginate(10);
+
+        // Batch load voucher redeems to prevent N+1 queries
+        $this->balanceRepository->loadVoucherRedeems($balances->items());
 
         return $this->success([
             'data' => BalanceResource::collection($balances->items()),
